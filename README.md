@@ -9,3 +9,9 @@
 ```bash
 docker compose up --build
 ```
+
+### Odstępstwo od instrukcji — tabela `items_aud`
+![img.png](instruction-1.png)
+Fragment instrukcji
+
+Instrukcja zakłada, że tabela `items_aud` zostanie wygenerowana automatycznie przez Hibernate Envers. Celowo zrezygnowałem z tego podejścia, ponieważ wymaga ono ustawienia `spring.jpa.hibernate.ddl-auto=update`, a ja wybrałem ustawienie tego parametru na "validate". Zamiast tego tabela audytowa `items_aud` jest tworzona przez Liquibase.

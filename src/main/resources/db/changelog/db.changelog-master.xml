@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="1" author="plecicki">
+        <createTable tableName="users">
+            <column name="id" type="binary(16)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="login" type="varchar(64)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="password" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="2" author="plecicki">
+        <createTable tableName="items">
+            <column name="id" type="binary(16)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="owner_id" type="binary(16)">
+                <constraints nullable="false" references="users(id)" foreignKeyName="fk_items_owner"/>
+            </column>
+            <column name="title" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="content" type="text"/>
+            <column name="version" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="3" author="plecicki">
+        <createTable tableName="item_permissions">
+            <column name="id" type="binary(16)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="item_id" type="binary(16)">
+                <constraints nullable="false" references="items(id)" foreignKeyName="fk_item_permissions_item"/>
+            </column>
+            <column name="user_id" type="binary(16)">
+                <constraints nullable="false" references="users(id)" foreignKeyName="fk_item_permissions_user"/>
+            </column>
+            <column name="role" type="enum('VIEWER','EDITOR')">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="4" author="plecicki">
+        <createTable tableName="REVINFO">
+            <column name="REV" type="int" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="REVTSTMP" type="bigint"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="5" author="plecicki">
+        <createTable tableName="items_aud">
+            <column name="REV" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="id" type="binary(16)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="REVTYPE" type="tinyint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="owner_id" type="binary(16)"/>
+            <column name="title" type="varchar(255)"/>
+            <column name="content" type="text"/>
+            <column name="deleted" type="boolean"/>
+            <column name="created_at" type="timestamp"/>
+            <column name="updated_at" type="timestamp"/>
+        </createTable>
+        <addPrimaryKey tableName="items_aud" columnNames="REV, id" constraintName="pk_items_aud"/>
+    </changeSet>
+
+</databaseChangeLog>
