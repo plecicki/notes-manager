@@ -1,0 +1,48 @@
+services:
+  init-env:
+    image: alpine:3.20
+    container_name: notes-manager-init-env
+    volumes:
+      - .:/workspace
+    command: ["sh", "-c", "if [ -f /workspace/.env ]; then echo '.env already exists'; else cp /workspace/.env.example /workspace/.env && echo 'Created .env from .env.example'; fi"]
+
+  db:
+    image: mysql:8.4
+    container_name: notes-manager-db
+    restart: unless-stopped
+    depends_on:
+      init-env:
+        condition: service_completed_successfully
+    environment:
+      MYSQL_NOTES_MANAGER_PASS: ${MYSQL_NOTES_MANAGER_PASS:-admin}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-admin}
+      MYSQL_DATABASE: "Notes manager"
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: ${MYSQL_NOTES_MANAGER_PASS:-admin}
+    ports:
+      - "3306:3306"
+    volumes:
+      - notes-manager-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  app:
+    build: .
+    container_name: notes-manager-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      MYSQL_NOTES_MANAGER_PASS: ${MYSQL_NOTES_MANAGER_PASS:-admin}
+      MYSQL_HOST: db
+      MYSQL_PORT: "3306"
+    ports:
+      - "8080:8080"
+
+volumes:
+  notes-manager-mysql-data:
