@@ -39,6 +39,7 @@ services:
         condition: service_healthy
     environment:
       MYSQL_NOTES_MANAGER_PASS: ${MYSQL_NOTES_MANAGER_PASS:-admin}
+      JWT_SECRET: ${JWT_SECRET:-0123456789piotr0123456789lecicki0123456789betacom0123456789}
       MYSQL_HOST: db
       MYSQL_PORT: "3306"
     ports:
