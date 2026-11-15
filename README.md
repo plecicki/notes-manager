@@ -15,3 +15,8 @@ docker compose up --build
 Fragment instrukcji
 
 Instrukcja zakłada, że tabela `items_aud` zostanie wygenerowana automatycznie przez Hibernate Envers. Celowo zrezygnowałem z tego podejścia, ponieważ wymaga ono ustawienia `spring.jpa.hibernate.ddl-auto=update`, a ja wybrałem ustawienie tego parametru na "validate". Zamiast tego tabela audytowa `items_aud` jest tworzona przez Liquibase.
+
+
+## Testowanie w Postman
+
+W katalogu głównym znajduje się kolekcja `notes-manager.postman_collection.json` do testowania wszystkich endpointów.
