@@ -121,10 +121,10 @@ class AuthControllerIntegrationTest {
     }
 
     @Test
-    @DisplayName("protected endpoint without token returns 403")
+    @DisplayName("protected endpoint without token returns 401")
     void protectedEndpointShouldReturnForbiddenWithoutToken() throws Exception {
         mockMvc.perform(get("/items"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -140,9 +140,9 @@ class AuthControllerIntegrationTest {
     }
 
     @Test
-    @DisplayName("protected endpoint with malformed token returns 403")
+    @DisplayName("protected endpoint with malformed token returns 401")
     void protectedEndpointShouldReturnForbiddenWithMalformedToken() throws Exception {
         mockMvc.perform(get("/items").header("Authorization", "Bearer not-a-valid-jwt"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 }
