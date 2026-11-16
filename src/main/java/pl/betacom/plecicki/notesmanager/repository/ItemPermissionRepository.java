@@ -12,4 +12,6 @@ public interface ItemPermissionRepository extends JpaRepository<ItemPermission, 
     Optional<ItemPermission> findByItemIdAndUserId(UUID itemId, UUID userId);
 
     List<ItemPermission> findByUserId(UUID userId);
+
+    long deleteByItemIdAndUserId(UUID itemId, UUID userId);
 }

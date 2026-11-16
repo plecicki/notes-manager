@@ -20,3 +20,4 @@ Instrukcja zakłada, że tabela `items_aud` zostanie wygenerowana automatycznie 
 ## Testowanie w Postman
 
 W katalogu głównym znajduje się kolekcja `notes-manager.postman_collection.json` do testowania wszystkich endpointów.
+![img.png](postman-tests.png)

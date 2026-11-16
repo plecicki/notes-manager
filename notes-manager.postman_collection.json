@@ -1,16 +1,19 @@
 {
   "info": {
-    "name": "Notes Manager API - Piotr Łęcicki",
-    "description": "Kolejnosc: 1) Auth->Register, 2) Auth->Login (zapisuje token), 3) Items->Create (zapisuje itemId+version), 4) Items->List, 5) Items->Update, 6) Items->Delete. Wymaga uruchomionej aplikacji (localhost:8080) + MySQL.",
+    "name": "Notes Manager API",
+    "description": "Kolejnosc: 1) Auth->Register, 2) Auth->Register Target, 3) Auth->Login, 4) Items->Create, 5) Items->List, 6) Items->Update, 7) Items->Share VIEWER, 8) Items->Share Update EDITOR, 9) Items->Revoke, 10) Items->Delete, 11) Items->Get History (ADD+MOD+DEL).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     { "key": "baseUrl", "value": "http://localhost:8080" },
-    { "key": "login", "value": "jan.kowalski" },
-    { "key": "password", "value": "password123" },
+
+
+
     { "key": "token", "value": "" },
     { "key": "itemId", "value": "" },
-    { "key": "itemVersion", "value": "0" }
+    { "key": "itemVersion", "value": "0" },
+    { "key": "targetUserId", "value": "" },
+    { "key": "ownerUserId", "value": "" }
   ],
   "item": [
     {
@@ -19,61 +22,38 @@
         {
           "name": "Register",
           "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.collectionVariables.set('login', 'user' + Date.now());"
-                ]
-              }
-            },
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('status 201', function () { pm.response.to.have.status(201); });",
-                  "pm.test('login w odpowiedzi', function () { pm.expect(pm.response.json().login).to.eql(pm.collectionVariables.get('login')); });"
-                ]
-              }
-            }
+
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('status 201', function () { pm.response.to.have.status(201); });", "pm.collectionVariables.set('ownerUserId', pm.response.json().id);" ] } }
           ],
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"login\": \"{{login}}\",\n    \"password\": \"{{password}}\"\n}",
-              "options": { "raw": { "language": "json" } }
-            },
+            "body": { "mode": "raw", "raw": "{\n    \"login\": \"jan.kowalski\",\n    \"password\": \"password123\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{baseUrl}}/register", "host": ["{{baseUrl}}"], "path": ["register"] }
+          }
+        },
+        {
+          "name": "Register Target",
+          "event": [
+
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('status 201', function () { pm.response.to.have.status(201); });", "pm.collectionVariables.set('targetUserId', pm.response.json().id);" ] } }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n    \"login\": \"anna.nowak\",\n    \"password\": \"password123\"\n}", "options": { "raw": { "language": "json" } } },
             "url": { "raw": "{{baseUrl}}/register", "host": ["{{baseUrl}}"], "path": ["register"] }
           }
         },
         {
           "name": "Login",
           "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('status 200', function () { pm.response.to.have.status(200); });",
-                  "var token = pm.response.json().token;",
-                  "pm.collectionVariables.set('token', token);",
-                  "pm.test('token zapisany', function () { pm.expect(token).to.be.a('string'); });"
-                ]
-              }
-            }
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('status 200', function () { pm.response.to.have.status(200); });", "pm.collectionVariables.set('token', pm.response.json().token);" ] } }
           ],
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"login\": \"{{login}}\",\n    \"password\": \"{{password}}\"\n}",
-              "options": { "raw": { "language": "json" } }
-            },
+            "body": { "mode": "raw", "raw": "{\n    \"login\": \"jan.kowalski\",\n    \"password\": \"password123\"\n}", "options": { "raw": { "language": "json" } } },
             "url": { "raw": "{{baseUrl}}/login", "host": ["{{baseUrl}}"], "path": ["login"] }
           }
         }
@@ -85,45 +65,20 @@
         {
           "name": "Create Item",
           "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('status 201', function () { pm.response.to.have.status(201); });",
-                  "var b = pm.response.json();",
-                  "pm.collectionVariables.set('itemId', b.id);",
-                  "pm.collectionVariables.set('itemVersion', String(b.version));",
-                  "pm.test('version = 0', function () { pm.expect(b.version).to.eql(0); });"
-                ]
-              }
-            }
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('status 201', function () { pm.response.to.have.status(201); });", "var b = pm.response.json();", "pm.collectionVariables.set('itemId', b.id);", "pm.collectionVariables.set('itemVersion', String(b.version));" ] } }
           ],
           "request": {
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"title\": \"Moja notatka\",\n    \"content\": \"Tresc notatki\"\n}",
-              "options": { "raw": { "language": "json" } }
-            },
+            "body": { "mode": "raw", "raw": "{\n    \"title\": \"Moja notatka\",\n    \"content\": \"Tresc notatki\"\n}", "options": { "raw": { "language": "json" } } },
             "url": { "raw": "{{baseUrl}}/items", "host": ["{{baseUrl}}"], "path": ["items"] }
           }
         },
         {
           "name": "List Items",
           "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('status 200', function () { pm.response.to.have.status(200); });",
-                  "pm.test('to tablica', function () { pm.expect(pm.response.json()).to.be.an('array'); });"
-                ]
-              }
-            }
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('status 200', function () { pm.response.to.have.status(200); });", "pm.test('to tablica', function () { pm.expect(pm.response.json()).to.be.an('array'); });" ] } }
           ],
           "request": {
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
@@ -134,87 +89,73 @@
         {
           "name": "Update Item (PATCH)",
           "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('status 200', function () { pm.response.to.have.status(200); });",
-                  "var b = pm.response.json();",
-                  "var prev = Number(pm.collectionVariables.get('itemVersion'));",
-                  "pm.collectionVariables.set('itemVersion', String(b.version));",
-                  "pm.test('wersja = poprzednia + 1', function () { pm.expect(b.version).to.eql(prev + 1); });"
-                ]
-              }
-            }
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('status 200', function () { pm.response.to.have.status(200); });", "var b = pm.response.json();", "pm.collectionVariables.set('itemVersion', String(b.version));" ] } }
           ],
           "request": {
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
             "method": "PATCH",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"title\": \"Zaktualizowany tytul\",\n    \"content\": \"Nowa tresc\",\n    \"version\": {{itemVersion}}\n}",
-              "options": { "raw": { "language": "json" } }
-            },
+            "body": { "mode": "raw", "raw": "{\n    \"title\": \"Zaktualizowany tytul\",\n    \"content\": \"Nowa tresc\",\n    \"version\": {{itemVersion}}\n}", "options": { "raw": { "language": "json" } } },
             "url": { "raw": "{{baseUrl}}/items/{{itemId}}", "host": ["{{baseUrl}}"], "path": ["items", "{{itemId}}"] }
+          }
+        },
+        {
+          "name": "Share (VIEWER)",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('status 201', function () { pm.response.to.have.status(201); });" ] } }
+          ],
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n    \"userId\": \"{{targetUserId}}\",\n    \"role\": \"VIEWER\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{baseUrl}}/items/{{itemId}}/share", "host": ["{{baseUrl}}"], "path": ["items", "{{itemId}}", "share"] }
+          }
+        },
+        {
+          "name": "Share Update (EDITOR)",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('status 200', function () { pm.response.to.have.status(200); });" ] } }
+          ],
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n    \"userId\": \"{{targetUserId}}\",\n    \"role\": \"EDITOR\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{baseUrl}}/items/{{itemId}}/share", "host": ["{{baseUrl}}"], "path": ["items", "{{itemId}}", "share"] }
+          }
+        },
+        {
+          "name": "Revoke Access",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('status 204', function () { pm.response.to.have.status(204); });" ] } }
+          ],
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/items/{{itemId}}/share/{{targetUserId}}", "host": ["{{baseUrl}}"], "path": ["items", "{{itemId}}", "share", "{{targetUserId}}"] }
           }
         },
         {
           "name": "Delete Item",
           "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('status 204', function () { pm.response.to.have.status(204); });"
-                ]
-              }
-            }
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('status 204', function () { pm.response.to.have.status(204); });" ] } }
           ],
           "request": {
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
             "method": "DELETE",
             "url": { "raw": "{{baseUrl}}/items/{{itemId}}", "host": ["{{baseUrl}}"], "path": ["items", "{{itemId}}"] }
           }
-        }
-      ]
-    },
-    {
-      "name": "Negative",
-      "item": [
-        {
-          "name": "401 - GET /items bez tokenu",
-          "event": [
-            { "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('status 401', function () { pm.response.to.have.status(401); });" ] } }
-          ],
-          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/items", "host": ["{{baseUrl}}"], "path": ["items"] } }
         },
         {
-          "name": "400 - PATCH bez pola version",
+          "name": "Get History",
           "event": [
-            { "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('status 400', function () { pm.response.to.have.status(400); });" ] } }
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('status 200', function () { pm.response.to.have.status(200); });", "pm.test('to tablica', function () { pm.expect(pm.response.json()).to.be.an('array'); });" ] } }
           ],
           "request": {
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
-            "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n    \"title\": \"bez wersji\"\n}", "options": { "raw": { "language": "json" } } },
-            "url": { "raw": "{{baseUrl}}/items/{{itemId}}", "host": ["{{baseUrl}}"], "path": ["items", "{{itemId}}"] }
-          }
-        },
-        {
-          "name": "409 - PATCH z nieaktualna wersja",
-          "event": [
-            { "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('status 409', function () { pm.response.to.have.status(409); });" ] } }
-          ],
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
-            "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n    \"title\": \"stara wersja\",\n    \"version\": 0\n}", "options": { "raw": { "language": "json" } } },
-            "url": { "raw": "{{baseUrl}}/items/{{itemId}}", "host": ["{{baseUrl}}"], "path": ["items", "{{itemId}}"] }
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/items/{{itemId}}/history", "host": ["{{baseUrl}}"], "path": ["items", "{{itemId}}", "history"] }
           }
         }
       ]

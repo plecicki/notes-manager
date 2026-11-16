@@ -96,4 +96,22 @@
         <addPrimaryKey tableName="items_aud" columnNames="rev, id" constraintName="pk_items_aud"/>
     </changeSet>
 
+    <changeSet id="6" author="plecicki">
+        <addColumn tableName="revinfo">
+            <column name="changed_by" type="varchar(64)"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="7" author="plecicki">
+        <addColumn tableName="item_permissions">
+            <column name="granted_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="8" author="plecicki">
+        <addUniqueConstraint tableName="item_permissions" columnNames="item_id, user_id" constraintName="uk_item_permissions_item_user"/>
+    </changeSet>
+
 </databaseChangeLog>

@@ -13,11 +13,17 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import pl.betacom.plecicki.notesmanager.dto.CreateItemRequest;
+import pl.betacom.plecicki.notesmanager.dto.GrantResult;
+import pl.betacom.plecicki.notesmanager.dto.HistoryEntryResponse;
 import pl.betacom.plecicki.notesmanager.dto.ItemPatchResponse;
 import pl.betacom.plecicki.notesmanager.dto.ItemResponse;
 import pl.betacom.plecicki.notesmanager.dto.ItemSummaryResponse;
+import pl.betacom.plecicki.notesmanager.dto.PermissionResponse;
+import pl.betacom.plecicki.notesmanager.dto.ShareItemRequest;
 import pl.betacom.plecicki.notesmanager.dto.UpdateItemRequest;
 import pl.betacom.plecicki.notesmanager.service.CurrentUserService;
+import pl.betacom.plecicki.notesmanager.service.ItemHistoryService;
+import pl.betacom.plecicki.notesmanager.service.ItemPermissionService;
 import pl.betacom.plecicki.notesmanager.service.ItemService;
 
 import java.util.List;
@@ -29,6 +35,8 @@ import java.util.UUID;
 public class ItemController {
 
     private final ItemService itemService;
+    private final ItemHistoryService itemHistoryService;
+    private final ItemPermissionService itemPermissionService;
     private final CurrentUserService currentUserService;
 
     @PostMapping
@@ -51,6 +59,25 @@ public class ItemController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         itemService.softDelete(id, currentUserService.getCurrentUser());
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}/history")
+    public ResponseEntity<List<HistoryEntryResponse>> history(@PathVariable UUID id) {
+        return ResponseEntity.ok(itemHistoryService.findHistory(id, currentUserService.getCurrentUser()));
+    }
+
+    @PostMapping("/{id}/share")
+    public ResponseEntity<PermissionResponse> share(@PathVariable UUID id,
+                                                    @Valid @RequestBody ShareItemRequest request) {
+        GrantResult result = itemPermissionService.grant(id, request, currentUserService.getCurrentUser());
+        return ResponseEntity.status(result.created() ? HttpStatus.CREATED : HttpStatus.OK)
+                .body(result.permission());
+    }
+
+    @DeleteMapping("/{id}/share/{userId}")
+    public ResponseEntity<Void> revoke(@PathVariable UUID id, @PathVariable UUID userId) {
+        itemPermissionService.revoke(id, userId, currentUserService.getCurrentUser());
         return ResponseEntity.noContent().build();
     }
 }

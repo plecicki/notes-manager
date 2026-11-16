@@ -19,6 +19,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.Instant;
 import java.util.UUID;
 
 @Entity
@@ -46,4 +47,7 @@ public class ItemPermission {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, columnDefinition = "enum('OWNER','EDITOR','VIEWER')")
     private Role role;
+
+    @Column(name = "granted_at", nullable = false)
+    private Instant grantedAt;
 }

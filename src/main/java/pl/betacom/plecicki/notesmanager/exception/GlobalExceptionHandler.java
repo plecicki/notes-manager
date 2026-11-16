@@ -61,6 +61,26 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.CONFLICT, "error.item.version.conflict");
     }
 
+    @ExceptionHandler(SelfShareException.class)
+    public ResponseEntity<ErrorResponse> handleSelfShare(SelfShareException ex) {
+        return error(HttpStatus.BAD_REQUEST, "error.share.self");
+    }
+
+    @ExceptionHandler(InvalidShareRoleException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidShareRole(InvalidShareRoleException ex) {
+        return error(HttpStatus.BAD_REQUEST, "error.share.role");
+    }
+
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleUserNotFound(UserNotFoundException ex) {
+        return error(HttpStatus.NOT_FOUND, "error.user.not.found");
+    }
+
+    @ExceptionHandler(PermissionNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handlePermissionNotFound(PermissionNotFoundException ex) {
+        return error(HttpStatus.NOT_FOUND, "error.permission.not.found");
+    }
+
     private ResponseEntity<ErrorResponse> error(HttpStatus status, String code, Object... args) {
         String message = messageSource.getMessage(code, args, LocaleContextHolder.getLocale());
         return ResponseEntity.status(status)
