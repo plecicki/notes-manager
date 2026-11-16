@@ -11,17 +11,25 @@ import org.springframework.test.web.servlet.MockMvc;
 import pl.betacom.plecicki.notesmanager.config.SecurityConfig;
 import pl.betacom.plecicki.notesmanager.dto.ItemPatchResponse;
 import pl.betacom.plecicki.notesmanager.dto.ItemResponse;
+import pl.betacom.plecicki.notesmanager.dto.GrantResult;
+import pl.betacom.plecicki.notesmanager.dto.HistoryEntryResponse;
 import pl.betacom.plecicki.notesmanager.dto.ItemSummaryResponse;
+import pl.betacom.plecicki.notesmanager.dto.PermissionResponse;
 import pl.betacom.plecicki.notesmanager.entity.Role;
 import pl.betacom.plecicki.notesmanager.entity.User;
 import pl.betacom.plecicki.notesmanager.exception.ItemAccessDeniedException;
+import pl.betacom.plecicki.notesmanager.exception.InvalidShareRoleException;
 import pl.betacom.plecicki.notesmanager.exception.ItemNotFoundException;
+import pl.betacom.plecicki.notesmanager.exception.PermissionNotFoundException;
+import pl.betacom.plecicki.notesmanager.exception.SelfShareException;
 import pl.betacom.plecicki.notesmanager.exception.ItemVersionConflictException;
 import pl.betacom.plecicki.notesmanager.repository.UserRepository;
 import pl.betacom.plecicki.notesmanager.security.JwtAuthenticationFilter;
 import pl.betacom.plecicki.notesmanager.security.JwtService;
 import pl.betacom.plecicki.notesmanager.security.UserDetailsServiceImpl;
 import pl.betacom.plecicki.notesmanager.service.CurrentUserService;
+import pl.betacom.plecicki.notesmanager.service.ItemHistoryService;
+import pl.betacom.plecicki.notesmanager.service.ItemPermissionService;
 import pl.betacom.plecicki.notesmanager.service.ItemService;
 
 import java.time.Instant;
@@ -55,6 +63,12 @@ class ItemControllerIntegrationTest {
 
     @MockBean
     private UserRepository userRepository;
+
+    @MockBean
+    private ItemHistoryService itemHistoryService;
+
+    @MockBean
+    private ItemPermissionService itemPermissionService;
 
     private static final UUID ITEM_ID = UUID.fromString("7f3c2100-ab12-4fde-8765-112233445566");
     private static final UUID OWNER_ID = UUID.fromString("550e8400-e29b-41d4-a716-446655440000");
@@ -258,5 +272,167 @@ class ItemControllerIntegrationTest {
                         .content("{\"content\":\"new content\",\"version\":0}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").value("new content"));
+    }
+
+    @Test
+    @DisplayName("GET /items/{id}/history returns 200")
+    void historyShouldReturnOk() throws Exception {
+        String token = authenticate("jan.kowalski");
+        when(itemHistoryService.findHistory(eq(ITEM_ID), any())).thenReturn(List.of(
+                new HistoryEntryResponse(1, "ADD", Instant.now(), "jan.kowalski", "title", "content")));
+
+        mockMvc.perform(get("/items/" + ITEM_ID + "/history")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].revisionType").value("ADD"))
+                .andExpect(jsonPath("$[0].changedBy").value("jan.kowalski"));
+    }
+
+    @Test
+    @DisplayName("POST /items/{id}/share returns 201 for new grant")
+    void shareShouldReturnCreated() throws Exception {
+        String token = authenticate("jan.kowalski");
+        when(itemPermissionService.grant(eq(ITEM_ID), any(), any())).thenReturn(
+                new GrantResult(true, new PermissionResponse(ITEM_ID, OWNER_ID, Role.EDITOR, Instant.now())));
+
+        mockMvc.perform(post("/items/" + ITEM_ID + "/share")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"userId\":\"" + OWNER_ID + "\",\"role\":\"EDITOR\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.role").value("EDITOR"));
+    }
+
+    @Test
+    @DisplayName("POST /items/{id}/share returns 200 for role update")
+    void shareShouldReturnOkForUpdate() throws Exception {
+        String token = authenticate("jan.kowalski");
+        when(itemPermissionService.grant(eq(ITEM_ID), any(), any())).thenReturn(
+                new GrantResult(false, new PermissionResponse(ITEM_ID, OWNER_ID, Role.VIEWER, Instant.now())));
+
+        mockMvc.perform(post("/items/" + ITEM_ID + "/share")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"userId\":\"" + OWNER_ID + "\",\"role\":\"VIEWER\"}"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("POST /items/{id}/share returns 400 for self-share")
+    void shareShouldReturnBadRequestForSelf() throws Exception {
+        String token = authenticate("jan.kowalski");
+        when(itemPermissionService.grant(eq(ITEM_ID), any(), any())).thenThrow(new SelfShareException());
+
+        mockMvc.perform(post("/items/" + ITEM_ID + "/share")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"userId\":\"" + OWNER_ID + "\",\"role\":\"VIEWER\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("POST /items/{id}/share returns 403 for non-owner")
+    void shareShouldReturnForbidden() throws Exception {
+        String token = authenticate("jan.kowalski");
+        when(itemPermissionService.grant(eq(ITEM_ID), any(), any())).thenThrow(new ItemAccessDeniedException());
+
+        mockMvc.perform(post("/items/" + ITEM_ID + "/share")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"userId\":\"" + OWNER_ID + "\",\"role\":\"VIEWER\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("DELETE /items/{id}/share/{userId} returns 204")
+    void revokeShouldReturnNoContent() throws Exception {
+        String token = authenticate("jan.kowalski");
+        mockMvc.perform(delete("/items/" + ITEM_ID + "/share/" + OWNER_ID)
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    @DisplayName("DELETE /items/{id}/share/{userId} returns 404 when no permission")
+    void revokeShouldReturnNotFound() throws Exception {
+        String token = authenticate("jan.kowalski");
+        doThrow(new PermissionNotFoundException()).when(itemPermissionService).revoke(eq(ITEM_ID), eq(OWNER_ID), any());
+
+        mockMvc.perform(delete("/items/" + ITEM_ID + "/share/" + OWNER_ID)
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("POST /items/{id}/share with OWNER role returns 400")
+    void shareShouldReturnBadRequestForOwnerRole() throws Exception {
+        String token = authenticate("jan.kowalski");
+        when(itemPermissionService.grant(eq(ITEM_ID), any(), any())).thenThrow(new InvalidShareRoleException());
+
+        mockMvc.perform(post("/items/" + ITEM_ID + "/share")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"userId\":\"" + OWNER_ID + "\",\"role\":\"OWNER\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("POST /items/{id}/share with missing fields returns 400")
+    void shareShouldReturnBadRequestForMissingFields() throws Exception {
+        String token = authenticate("jan.kowalski");
+
+        mockMvc.perform(post("/items/" + ITEM_ID + "/share")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fields.userId").value("Field is required"))
+                .andExpect(jsonPath("$.fields.role").value("Field is required"));
+    }
+
+    @Test
+    @DisplayName("POST /items/{id}/share returns 404 for missing item")
+    void shareShouldReturnNotFound() throws Exception {
+        String token = authenticate("jan.kowalski");
+        when(itemPermissionService.grant(eq(ITEM_ID), any(), any())).thenThrow(new ItemNotFoundException(ITEM_ID));
+
+        mockMvc.perform(post("/items/" + ITEM_ID + "/share")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"userId\":\"" + OWNER_ID + "\",\"role\":\"VIEWER\"}"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("DELETE /items/{id}/share/{userId} returns 403 for non-owner")
+    void revokeShouldReturnForbidden() throws Exception {
+        String token = authenticate("jan.kowalski");
+        doThrow(new ItemAccessDeniedException()).when(itemPermissionService).revoke(eq(ITEM_ID), eq(OWNER_ID), any());
+
+        mockMvc.perform(delete("/items/" + ITEM_ID + "/share/" + OWNER_ID)
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("GET /items/{id}/history returns 403 without access")
+    void historyShouldReturnForbidden() throws Exception {
+        String token = authenticate("jan.kowalski");
+        when(itemHistoryService.findHistory(eq(ITEM_ID), any())).thenThrow(new ItemAccessDeniedException());
+
+        mockMvc.perform(get("/items/" + ITEM_ID + "/history")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("GET /items/{id}/history returns 404 for missing item")
+    void historyShouldReturnNotFound() throws Exception {
+        String token = authenticate("jan.kowalski");
+        when(itemHistoryService.findHistory(eq(ITEM_ID), any())).thenThrow(new ItemNotFoundException(ITEM_ID));
+
+        mockMvc.perform(get("/items/" + ITEM_ID + "/history")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNotFound());
     }
 }
