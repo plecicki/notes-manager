@@ -3,6 +3,7 @@ package pl.betacom.plecicki.notesmanager.service;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.hibernate.envers.AuditReader;
 import org.hibernate.envers.AuditReaderFactory;
 import org.hibernate.envers.RevisionType;
@@ -22,6 +23,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ItemHistoryService {
@@ -46,9 +48,11 @@ public class ItemHistoryService {
                 .forRevisionsOfEntity(Item.class, false, true)
                 .add(AuditEntity.id().eq(itemId));
 
-        return query.getResultList().stream()
+        List<HistoryEntryResponse> history = query.getResultList().stream()
                 .map(row -> toHistoryEntry((Object[]) row))
                 .toList();
+        log.info("User '{}' fetched {} revisions of item {}", user.getLogin(), history.size(), itemId);
+        return history;
     }
 
     private HistoryEntryResponse toHistoryEntry(Object[] row) {

@@ -1,6 +1,7 @@
 package pl.betacom.plecicki.notesmanager.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pl.betacom.plecicki.notesmanager.dto.GrantResult;
@@ -24,6 +25,7 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ItemPermissionService {
@@ -71,6 +73,7 @@ public class ItemPermissionService {
         }
 
         ItemPermission saved = itemPermissionRepository.saveAndFlush(permission);
+        log.info("User '{}' {} role {} on item {} for user {}", owner.getLogin(), created ? "granted" : "updated", saved.getRole(), itemId, request.userId());
 
         return new GrantResult(created, new PermissionResponse(
                 saved.getItem().getId(),
@@ -91,6 +94,7 @@ public class ItemPermissionService {
         if (deleted == 0) {
             throw new PermissionNotFoundException();
         }
+        log.info("User '{}' revoked access to item {} from user {}", owner.getLogin(), itemId, userId);
     }
 
     private Item findActiveItem(UUID id) {

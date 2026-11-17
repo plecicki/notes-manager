@@ -42,6 +42,10 @@ Warstwy: `controller` → `service` → `repository` → `entity` (+ `dto`, `exc
 - **Rate limiting (Bucket4j)**
    - `POST /login` ograniczony do 5 prób/min na IP
    - Przy przekroczeniu **429** + nagłówek `Retry-After`.
+- **Logowanie (SLF4J + Logback)**
+  - Logi operacji z parametrami (`@Slf4j`): użytkownik, item, rola, wersja, IP.
+  - Każde żądanie dostaje unikalny **Correlation-Id** (`X-Correlation-Id`) zapisywany w MDC i zwracany w nagłówku odpowiedzi
+  - Tokeny JWT, hasła, inne dane wrażliwe nie są logowane.
 - **i18n** — komunikaty błędów i walidacji w `messages.properties`.
 - **Testy**
    - Mockito (jednostkowe),
@@ -62,6 +66,7 @@ Warstwy: `controller` → `service` → `repository` → `entity` (+ `dto`, `exc
 | `jwt.expiration-seconds` | `3600`                                     | czas życia tokenu (w sekundach) |
 | `rate-limit.login.capacity` | `5`                                        | liczba prób logowania na okno czasowe |
 | `rate-limit.login.refill-period-seconds` | `60`                                       | długość okna czasowego (w sekundach) |
+| `logging.level.pl.betacom.plecicki.notesmanager` | `DEBUG`                                   | poziom logowania aplikacji (własne klasy) |
 
 ## Testowanie w Postman
 
