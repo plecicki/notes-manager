@@ -70,6 +70,12 @@ class ItemHistoryIntegrationTest {
         ResponseEntity<Map> upd1 = restTemplate.exchange("/items/" + id, HttpMethod.PATCH, new HttpEntity<>(body1, auth), Map.class);
         assertThat(upd1.getStatusCode()).isEqualTo(HttpStatus.OK);
 
+        Map<String, Object> body2 = new HashMap<>();
+        body2.put("title", "Title 3");
+        body2.put("version", 1);
+        ResponseEntity<Map> upd2 = restTemplate.exchange("/items/" + id, HttpMethod.PATCH, new HttpEntity<>(body2, auth), Map.class);
+        assertThat(upd2.getStatusCode()).isEqualTo(HttpStatus.OK);
+
         ResponseEntity<Void> deleted = restTemplate.exchange("/items/" + id, HttpMethod.DELETE, new HttpEntity<>(auth), Void.class);
         assertThat(deleted.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
 
@@ -77,7 +83,7 @@ class ItemHistoryIntegrationTest {
 
         assertThat(history.getStatusCode()).isEqualTo(HttpStatus.OK);
         List<?> entries = history.getBody();
-        assertThat(entries).hasSize(3);
+        assertThat(entries).hasSize(4);
 
         Map first = (Map) entries.get(0);
         assertThat(first.get("revisionType")).isEqualTo("ADD");
@@ -89,7 +95,11 @@ class ItemHistoryIntegrationTest {
         assertThat(second.get("title")).isEqualTo("Title 2");
 
         Map third = (Map) entries.get(2);
-        assertThat(third.get("revisionType")).isEqualTo("DEL");
+        assertThat(third.get("revisionType")).isEqualTo("MOD");
+        assertThat(third.get("title")).isEqualTo("Title 3");
+
+        Map fourth = (Map) entries.get(3);
+        assertThat(fourth.get("revisionType")).isEqualTo("DEL");
     }
 
     @Test

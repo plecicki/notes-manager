@@ -7,6 +7,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.test.web.servlet.MockMvc;
 import pl.betacom.plecicki.notesmanager.config.SecurityConfig;
 import pl.betacom.plecicki.notesmanager.dto.ItemPatchResponse;
@@ -434,5 +435,19 @@ class ItemControllerIntegrationTest {
         mockMvc.perform(get("/items/" + ITEM_ID + "/history")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("PATCH /items/{id} with optimistic lock failure returns 409")
+    void updateShouldReturnConflictForOptimisticLock() throws Exception {
+        String token = authenticate("jan.kowalski");
+        when(itemService.update(eq(ITEM_ID), any(), any()))
+                .thenThrow(new ObjectOptimisticLockingFailureException("stale version", null));
+
+        mockMvc.perform(patch("/items/" + ITEM_ID)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"new\",\"version\":0}"))
+                .andExpect(status().isConflict());
     }
 }
