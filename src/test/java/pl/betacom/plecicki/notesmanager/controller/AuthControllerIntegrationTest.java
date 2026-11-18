@@ -50,12 +50,15 @@ class AuthControllerIntegrationTest {
     @Test
     @DisplayName("POST /register with valid data returns 201")
     void registerShouldReturnCreated() throws Exception {
+        // [GIVEN]
         RegisterResponse response = new RegisterResponse(UUID.randomUUID(), "jan.kowalski", Instant.now());
         when(authService.register(any())).thenReturn(response);
 
+        // [WHEN]
         mockMvc.perform(post("/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"login\":\"jan.kowalski\",\"password\":\"password123\"}"))
+        // [THEN]
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.login").value("jan.kowalski"))
                 .andExpect(jsonPath("$.id").exists());
@@ -64,9 +67,11 @@ class AuthControllerIntegrationTest {
     @Test
     @DisplayName("POST /register with short login returns 400 with field error")
     void registerShouldReturnBadRequestForShortLogin() throws Exception {
+        // [WHEN]
         mockMvc.perform(post("/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"login\":\"ab\",\"password\":\"password123\"}"))
+        // [THEN]
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("Bad Request"))
                 .andExpect(jsonPath("$.fields.login").value("Login must be 3-64 characters long"));
@@ -75,11 +80,14 @@ class AuthControllerIntegrationTest {
     @Test
     @DisplayName("POST /register with duplicate login returns 409")
     void registerShouldReturnConflict() throws Exception {
+        // [GIVEN]
         when(authService.register(any())).thenThrow(new LoginAlreadyTakenException("jan.kowalski"));
 
+        // [WHEN]
         mockMvc.perform(post("/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"login\":\"jan.kowalski\",\"password\":\"password123\"}"))
+        // [THEN]
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error").value("Conflict"));
     }
@@ -87,11 +95,14 @@ class AuthControllerIntegrationTest {
     @Test
     @DisplayName("POST /login with valid data returns 200 with token")
     void loginShouldReturnToken() throws Exception {
+        // [GIVEN]
         when(authService.login(any())).thenReturn(new LoginResponse("token-abc", 3600));
 
+        // [WHEN]
         mockMvc.perform(post("/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"login\":\"jan.kowalski\",\"password\":\"password123\"}"))
+        // [THEN]
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.token").value("token-abc"))
                 .andExpect(jsonPath("$.expiresIn").value(3600));
@@ -100,11 +111,14 @@ class AuthControllerIntegrationTest {
     @Test
     @DisplayName("POST /login with wrong password returns 401")
     void loginShouldReturnUnauthorized() throws Exception {
+        // [GIVEN]
         when(authService.login(any())).thenThrow(new BadCredentialsException("Invalid login or password"));
 
+        // [WHEN]
         mockMvc.perform(post("/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"login\":\"jan.kowalski\",\"password\":\"wrong\"}"))
+        // [THEN]
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value("Unauthorized"));
     }
@@ -112,9 +126,11 @@ class AuthControllerIntegrationTest {
     @Test
     @DisplayName("POST /login with empty fields returns 400 with field errors")
     void loginShouldReturnBadRequestForEmptyFields() throws Exception {
+        // [WHEN]
         mockMvc.perform(post("/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"login\":\"\",\"password\":\"\"}"))
+        // [THEN]
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fields.login").value("Field is required"))
                 .andExpect(jsonPath("$.fields.password").value("Field is required"));
@@ -123,26 +139,33 @@ class AuthControllerIntegrationTest {
     @Test
     @DisplayName("protected endpoint without token returns 401")
     void protectedEndpointShouldReturnForbiddenWithoutToken() throws Exception {
+        // [WHEN]
         mockMvc.perform(get("/items"))
+        // [THEN]
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
     @DisplayName("protected endpoint with valid token passes security")
     void protectedEndpointShouldPassWithValidToken() throws Exception {
+        // [GIVEN]
         User user = User.builder().login("jan.kowalski").password("encoded").build();
         when(userRepository.findByLogin("jan.kowalski")).thenReturn(Optional.of(user));
 
         String token = jwtService.generateToken("jan.kowalski");
 
+        // [WHEN]
         mockMvc.perform(get("/items").header("Authorization", "Bearer " + token))
+        // [THEN]
                 .andExpect(status().isNotFound());
     }
 
     @Test
     @DisplayName("protected endpoint with malformed token returns 401")
     void protectedEndpointShouldReturnForbiddenWithMalformedToken() throws Exception {
+        // [WHEN]
         mockMvc.perform(get("/items").header("Authorization", "Bearer not-a-valid-jwt"))
+        // [THEN]
                 .andExpect(status().isUnauthorized());
     }
 }

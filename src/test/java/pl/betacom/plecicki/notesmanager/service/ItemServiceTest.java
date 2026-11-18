@@ -74,11 +74,14 @@ class ItemServiceTest {
     @Test
     @DisplayName("create should set owner and trim title")
     void createShouldSetOwnerAndTrimTitle() {
+        // [GIVEN]
         Item saved = item(0);
         when(itemRepository.saveAndFlush(any(Item.class))).thenReturn(saved);
 
+        // [WHEN]
         ItemResponse response = itemService.create(new CreateItemRequest("  Title  ", "content"), user(ownerId));
 
+        // [THEN]
         ArgumentCaptor<Item> captor = ArgumentCaptor.forClass(Item.class);
         verify(itemRepository).saveAndFlush(captor.capture());
         assertThat(captor.getValue().getTitle()).isEqualTo("Title");
@@ -91,6 +94,7 @@ class ItemServiceTest {
     @Test
     @DisplayName("findAll should assign OWNER role for owned and permission role for shared items")
     void findAllShouldAssignRoles() {
+        // [GIVEN]
         UUID otherOwner = UUID.randomUUID();
         Item owned = item(1);
         Item shared = Item.builder()
@@ -111,8 +115,10 @@ class ItemServiceTest {
         when(itemAccessService.isOwner(eq(owned), any())).thenReturn(true);
         when(itemAccessService.isOwner(eq(shared), any())).thenReturn(false);
 
+        // [WHEN]
         List<ItemSummaryResponse> result = itemService.findAll(user(ownerId));
 
+        // [THEN]
         assertThat(result).hasSize(2);
         assertThat(result.get(0).myRole()).isEqualTo(Role.OWNER);
         assertThat(result.get(1).myRole()).isEqualTo(Role.VIEWER);
@@ -121,13 +127,16 @@ class ItemServiceTest {
     @Test
     @DisplayName("update should modify fields and return response")
     void updateShouldModifyFields() {
+        // [GIVEN]
         Item item = item(2);
         when(itemRepository.findById(itemId)).thenReturn(Optional.of(item));
         when(itemAccessService.canEdit(eq(item), any())).thenReturn(true);
         when(itemRepository.saveAndFlush(any(Item.class))).thenAnswer(inv -> inv.getArgument(0));
 
+        // [WHEN]
         ItemPatchResponse response = itemService.update(itemId, new UpdateItemRequest("  new title  ", "new content", 2), user(ownerId));
 
+        // [THEN]
         assertThat(item.getTitle()).isEqualTo("new title");
         assertThat(item.getContent()).isEqualTo("new content");
         assertThat(response.title()).isEqualTo("new title");
@@ -137,13 +146,16 @@ class ItemServiceTest {
     @Test
     @DisplayName("update should leave content unchanged when null")
     void updateShouldLeaveContentWhenNull() {
+        // [GIVEN]
         Item item = item(2);
         when(itemRepository.findById(itemId)).thenReturn(Optional.of(item));
         when(itemAccessService.canEdit(eq(item), any())).thenReturn(true);
         when(itemRepository.saveAndFlush(any(Item.class))).thenAnswer(inv -> inv.getArgument(0));
 
+        // [WHEN]
         itemService.update(itemId, new UpdateItemRequest("new title", null, 2), user(ownerId));
 
+        // [THEN]
         assertThat(item.getTitle()).isEqualTo("new title");
         assertThat(item.getContent()).isEqualTo("content");
     }
@@ -151,27 +163,33 @@ class ItemServiceTest {
     @Test
     @DisplayName("update should throw forbidden when user cannot edit")
     void updateShouldThrowForbidden() {
+        // [GIVEN]
         Item item = item(2);
         when(itemRepository.findById(itemId)).thenReturn(Optional.of(item));
         when(itemAccessService.canEdit(eq(item), any())).thenReturn(false);
 
+        // [WHEN]
         assertThatThrownBy(() -> itemService.update(itemId, new UpdateItemRequest("new", null, 2), user(viewerId)))
                 .isInstanceOf(ItemAccessDeniedException.class);
 
+        // [THEN]
         verify(itemRepository, never()).saveAndFlush(any());
     }
 
     @Test
     @DisplayName("update should throw version conflict with current version")
     void updateShouldThrowVersionConflict() {
+        // [GIVEN]
         Item item = item(2);
         when(itemRepository.findById(itemId)).thenReturn(Optional.of(item));
         when(itemAccessService.canEdit(eq(item), any())).thenReturn(true);
 
+        // [WHEN]
         ItemVersionConflictException ex = catchThrowableOfType(
                 () -> itemService.update(itemId, new UpdateItemRequest("new", null, 1), user(ownerId)),
                 ItemVersionConflictException.class);
 
+        // [THEN]
         assertThat(ex.getCurrentVersion()).isEqualTo(2);
         verify(itemRepository, never()).saveAndFlush(any());
     }
@@ -179,8 +197,10 @@ class ItemServiceTest {
     @Test
     @DisplayName("update should throw not found for missing item")
     void updateShouldThrowNotFound() {
+        // [GIVEN]
         when(itemRepository.findById(itemId)).thenReturn(Optional.empty());
 
+        // [WHEN]
         assertThatThrownBy(() -> itemService.update(itemId, new UpdateItemRequest("x", null, 1), user(ownerId)))
                 .isInstanceOf(ItemNotFoundException.class);
     }
@@ -188,10 +208,12 @@ class ItemServiceTest {
     @Test
     @DisplayName("update should throw not found for deleted item")
     void updateShouldThrowNotFoundForDeleted() {
+        // [GIVEN]
         Item deleted = item(1);
         deleted.setDeleted(true);
         when(itemRepository.findById(itemId)).thenReturn(Optional.of(deleted));
 
+        // [WHEN]
         assertThatThrownBy(() -> itemService.update(itemId, new UpdateItemRequest("x", null, 1), user(ownerId)))
                 .isInstanceOf(ItemNotFoundException.class);
     }
@@ -199,12 +221,15 @@ class ItemServiceTest {
     @Test
     @DisplayName("softDelete should mark item deleted for owner")
     void softDeleteShouldMarkDeleted() {
+        // [GIVEN]
         Item item = item(1);
         when(itemRepository.findById(itemId)).thenReturn(Optional.of(item));
         when(itemAccessService.isOwner(eq(item), any())).thenReturn(true);
 
+        // [WHEN]
         itemService.softDelete(itemId, user(ownerId));
 
+        // [THEN]
         assertThat(item.isDeleted()).isTrue();
         verify(itemRepository).saveAndFlush(item);
     }
@@ -212,26 +237,32 @@ class ItemServiceTest {
     @Test
     @DisplayName("softDelete should throw forbidden for non-owner")
     void softDeleteShouldThrowForbidden() {
+        // [GIVEN]
         Item item = item(1);
         when(itemRepository.findById(itemId)).thenReturn(Optional.of(item));
         when(itemAccessService.isOwner(eq(item), any())).thenReturn(false);
 
+        // [WHEN]
         assertThatThrownBy(() -> itemService.softDelete(itemId, user(viewerId)))
                 .isInstanceOf(ItemAccessDeniedException.class);
 
+        // [THEN]
         verify(itemRepository, never()).saveAndFlush(any());
     }
 
     @Test
     @DisplayName("update should leave title unchanged when null")
     void updateShouldLeaveTitleWhenNull() {
+        // [GIVEN]
         Item item = item(2);
         when(itemRepository.findById(itemId)).thenReturn(Optional.of(item));
         when(itemAccessService.canEdit(eq(item), any())).thenReturn(true);
         when(itemRepository.saveAndFlush(any(Item.class))).thenAnswer(inv -> inv.getArgument(0));
 
+        // [WHEN]
         itemService.update(itemId, new UpdateItemRequest(null, "new content", 2), user(ownerId));
 
+        // [THEN]
         assertThat(item.getTitle()).isEqualTo("title");
         assertThat(item.getContent()).isEqualTo("new content");
     }
@@ -239,10 +270,12 @@ class ItemServiceTest {
     @Test
     @DisplayName("softDelete should throw not found for deleted item")
     void softDeleteShouldThrowNotFoundForDeleted() {
+        // [GIVEN]
         Item deleted = item(1);
         deleted.setDeleted(true);
         when(itemRepository.findById(itemId)).thenReturn(Optional.of(deleted));
 
+        // [WHEN]
         assertThatThrownBy(() -> itemService.softDelete(itemId, user(ownerId)))
                 .isInstanceOf(ItemNotFoundException.class);
     }

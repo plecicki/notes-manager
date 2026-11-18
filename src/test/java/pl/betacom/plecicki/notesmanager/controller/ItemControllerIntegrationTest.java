@@ -150,13 +150,16 @@ class ItemControllerIntegrationTest {
     @Test
     @DisplayName("PATCH /items/{id} returns 403 for viewer")
     void updateShouldReturnForbidden() throws Exception {
+        // [GIVEN]
         String token = authenticate("jan.kowalski");
         when(itemService.update(eq(ITEM_ID), any(), any())).thenThrow(new ItemAccessDeniedException());
 
+        // [WHEN]
         mockMvc.perform(patch("/items/" + ITEM_ID)
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"title\":\"new\",\"version\":0}"))
+        // [THEN]
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error").value("Forbidden"));
     }
@@ -164,13 +167,16 @@ class ItemControllerIntegrationTest {
     @Test
     @DisplayName("PATCH /items/{id} returns 404 for missing item")
     void updateShouldReturnNotFound() throws Exception {
+        // [GIVEN]
         String token = authenticate("jan.kowalski");
         when(itemService.update(eq(ITEM_ID), any(), any())).thenThrow(new ItemNotFoundException(ITEM_ID));
 
+        // [WHEN]
         mockMvc.perform(patch("/items/" + ITEM_ID)
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"title\":\"new\",\"version\":0}"))
+        // [THEN]
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("Not Found"));
     }
@@ -178,13 +184,16 @@ class ItemControllerIntegrationTest {
     @Test
     @DisplayName("PATCH /items/{id} returns 409 with currentVersion on conflict")
     void updateShouldReturnConflict() throws Exception {
+        // [GIVEN]
         String token = authenticate("jan.kowalski");
         when(itemService.update(eq(ITEM_ID), any(), any())).thenThrow(new ItemVersionConflictException(5));
 
+        // [WHEN]
         mockMvc.perform(patch("/items/" + ITEM_ID)
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"title\":\"new\",\"version\":0}"))
+        // [THEN]
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error").value("Conflict"))
                 .andExpect(jsonPath("$.fields.currentVersion").value("5"));
@@ -193,11 +202,14 @@ class ItemControllerIntegrationTest {
     @Test
     @DisplayName("PATCH /items/{id} without version returns 400")
     void updateShouldReturnBadRequestWithoutVersion() throws Exception {
+        // [GIVEN]
         String token = authenticate("jan.kowalski");
+        // [WHEN]
         mockMvc.perform(patch("/items/" + ITEM_ID)
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"title\":\"new\"}"))
+        // [THEN]
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fields.version").value("Version is required"));
     }
@@ -205,44 +217,56 @@ class ItemControllerIntegrationTest {
     @Test
     @DisplayName("DELETE /items/{id} returns 204 for owner")
     void deleteShouldReturnNoContent() throws Exception {
+        // [GIVEN]
         String token = authenticate("jan.kowalski");
+        // [WHEN]
         mockMvc.perform(delete("/items/" + ITEM_ID)
                         .header("Authorization", "Bearer " + token))
+        // [THEN]
                 .andExpect(status().isNoContent());
     }
 
     @Test
     @DisplayName("DELETE /items/{id} returns 403 for non-owner")
     void deleteShouldReturnForbidden() throws Exception {
+        // [GIVEN]
         String token = authenticate("jan.kowalski");
         doThrow(new ItemAccessDeniedException()).when(itemService).softDelete(eq(ITEM_ID), any());
 
+        // [WHEN]
         mockMvc.perform(delete("/items/" + ITEM_ID)
                         .header("Authorization", "Bearer " + token))
+        // [THEN]
                 .andExpect(status().isForbidden());
     }
 
     @Test
     @DisplayName("DELETE /items/{id} returns 404 for missing item")
     void deleteShouldReturnNotFound() throws Exception {
+        // [GIVEN]
         String token = authenticate("jan.kowalski");
         doThrow(new ItemNotFoundException(ITEM_ID)).when(itemService).softDelete(eq(ITEM_ID), any());
 
+        // [WHEN]
         mockMvc.perform(delete("/items/" + ITEM_ID)
                         .header("Authorization", "Bearer " + token))
+        // [THEN]
                 .andExpect(status().isNotFound());
     }
 
     @Test
     @DisplayName("POST /items with title longer than 255 chars returns 400")
     void createShouldReturnBadRequestForTooLongTitle() throws Exception {
+        // [GIVEN]
         String token = authenticate("jan.kowalski");
         String longTitle = "a".repeat(256);
 
+        // [WHEN]
         mockMvc.perform(post("/items")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"title\":\"" + longTitle + "\"}"))
+        // [THEN]
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fields.title").value("Title must be at most 255 characters"));
     }
@@ -250,12 +274,15 @@ class ItemControllerIntegrationTest {
     @Test
     @DisplayName("PATCH /items/{id} with blank title returns 400")
     void updateShouldReturnBadRequestForBlankTitle() throws Exception {
+        // [GIVEN]
         String token = authenticate("jan.kowalski");
 
+        // [WHEN]
         mockMvc.perform(patch("/items/" + ITEM_ID)
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"title\":\"   \",\"version\":0}"))
+        // [THEN]
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fields.title").value("Title must not be blank"));
     }
@@ -263,14 +290,17 @@ class ItemControllerIntegrationTest {
     @Test
     @DisplayName("PATCH /items/{id} with only content returns 200")
     void updateShouldReturnOkWithOnlyContent() throws Exception {
+        // [GIVEN]
         String token = authenticate("jan.kowalski");
         when(itemService.update(eq(ITEM_ID), any(), any())).thenReturn(
                 new ItemPatchResponse(ITEM_ID, "unchanged", "new content", 1, Instant.now()));
 
+        // [WHEN]
         mockMvc.perform(patch("/items/" + ITEM_ID)
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"content\":\"new content\",\"version\":0}"))
+        // [THEN]
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").value("new content"));
     }
@@ -278,12 +308,15 @@ class ItemControllerIntegrationTest {
     @Test
     @DisplayName("GET /items/{id}/history returns 200")
     void historyShouldReturnOk() throws Exception {
+        // [GIVEN]
         String token = authenticate("jan.kowalski");
         when(itemHistoryService.findHistory(eq(ITEM_ID), any())).thenReturn(List.of(
                 new HistoryEntryResponse(1, "ADD", Instant.now(), "jan.kowalski", "title", "content")));
 
+        // [WHEN]
         mockMvc.perform(get("/items/" + ITEM_ID + "/history")
                         .header("Authorization", "Bearer " + token))
+        // [THEN]
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].revisionType").value("ADD"))
                 .andExpect(jsonPath("$[0].changedBy").value("jan.kowalski"));
@@ -292,14 +325,17 @@ class ItemControllerIntegrationTest {
     @Test
     @DisplayName("POST /items/{id}/share returns 201 for new grant")
     void shareShouldReturnCreated() throws Exception {
+        // [GIVEN]
         String token = authenticate("jan.kowalski");
         when(itemPermissionService.grant(eq(ITEM_ID), any(), any())).thenReturn(
                 new GrantResult(true, new PermissionResponse(ITEM_ID, OWNER_ID, Role.EDITOR, Instant.now())));
 
+        // [WHEN]
         mockMvc.perform(post("/items/" + ITEM_ID + "/share")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"userId\":\"" + OWNER_ID + "\",\"role\":\"EDITOR\"}"))
+        // [THEN]
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.role").value("EDITOR"));
     }
@@ -307,85 +343,106 @@ class ItemControllerIntegrationTest {
     @Test
     @DisplayName("POST /items/{id}/share returns 200 for role update")
     void shareShouldReturnOkForUpdate() throws Exception {
+        // [GIVEN]
         String token = authenticate("jan.kowalski");
         when(itemPermissionService.grant(eq(ITEM_ID), any(), any())).thenReturn(
                 new GrantResult(false, new PermissionResponse(ITEM_ID, OWNER_ID, Role.VIEWER, Instant.now())));
 
+        // [WHEN]
         mockMvc.perform(post("/items/" + ITEM_ID + "/share")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"userId\":\"" + OWNER_ID + "\",\"role\":\"VIEWER\"}"))
+        // [THEN]
                 .andExpect(status().isOk());
     }
 
     @Test
     @DisplayName("POST /items/{id}/share returns 400 for self-share")
     void shareShouldReturnBadRequestForSelf() throws Exception {
+        // [GIVEN]
         String token = authenticate("jan.kowalski");
         when(itemPermissionService.grant(eq(ITEM_ID), any(), any())).thenThrow(new SelfShareException());
 
+        // [WHEN]
         mockMvc.perform(post("/items/" + ITEM_ID + "/share")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"userId\":\"" + OWNER_ID + "\",\"role\":\"VIEWER\"}"))
+        // [THEN]
                 .andExpect(status().isBadRequest());
     }
 
     @Test
     @DisplayName("POST /items/{id}/share returns 403 for non-owner")
     void shareShouldReturnForbidden() throws Exception {
+        // [GIVEN]
         String token = authenticate("jan.kowalski");
         when(itemPermissionService.grant(eq(ITEM_ID), any(), any())).thenThrow(new ItemAccessDeniedException());
 
+        // [WHEN]
         mockMvc.perform(post("/items/" + ITEM_ID + "/share")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"userId\":\"" + OWNER_ID + "\",\"role\":\"VIEWER\"}"))
+        // [THEN]
                 .andExpect(status().isForbidden());
     }
 
     @Test
     @DisplayName("DELETE /items/{id}/share/{userId} returns 204")
     void revokeShouldReturnNoContent() throws Exception {
+        // [GIVEN]
         String token = authenticate("jan.kowalski");
+        // [WHEN]
         mockMvc.perform(delete("/items/" + ITEM_ID + "/share/" + OWNER_ID)
                         .header("Authorization", "Bearer " + token))
+        // [THEN]
                 .andExpect(status().isNoContent());
     }
 
     @Test
     @DisplayName("DELETE /items/{id}/share/{userId} returns 404 when no permission")
     void revokeShouldReturnNotFound() throws Exception {
+        // [GIVEN]
         String token = authenticate("jan.kowalski");
         doThrow(new PermissionNotFoundException()).when(itemPermissionService).revoke(eq(ITEM_ID), eq(OWNER_ID), any());
 
+        // [WHEN]
         mockMvc.perform(delete("/items/" + ITEM_ID + "/share/" + OWNER_ID)
                         .header("Authorization", "Bearer " + token))
+        // [THEN]
                 .andExpect(status().isNotFound());
     }
 
     @Test
     @DisplayName("POST /items/{id}/share with OWNER role returns 400")
     void shareShouldReturnBadRequestForOwnerRole() throws Exception {
+        // [GIVEN]
         String token = authenticate("jan.kowalski");
         when(itemPermissionService.grant(eq(ITEM_ID), any(), any())).thenThrow(new InvalidShareRoleException());
 
+        // [WHEN]
         mockMvc.perform(post("/items/" + ITEM_ID + "/share")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"userId\":\"" + OWNER_ID + "\",\"role\":\"OWNER\"}"))
+        // [THEN]
                 .andExpect(status().isBadRequest());
     }
 
     @Test
     @DisplayName("POST /items/{id}/share with missing fields returns 400")
     void shareShouldReturnBadRequestForMissingFields() throws Exception {
+        // [GIVEN]
         String token = authenticate("jan.kowalski");
 
+        // [WHEN]
         mockMvc.perform(post("/items/" + ITEM_ID + "/share")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
+        // [THEN]
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fields.userId").value("Field is required"))
                 .andExpect(jsonPath("$.fields.role").value("Field is required"));
@@ -394,60 +451,75 @@ class ItemControllerIntegrationTest {
     @Test
     @DisplayName("POST /items/{id}/share returns 404 for missing item")
     void shareShouldReturnNotFound() throws Exception {
+        // [GIVEN]
         String token = authenticate("jan.kowalski");
         when(itemPermissionService.grant(eq(ITEM_ID), any(), any())).thenThrow(new ItemNotFoundException(ITEM_ID));
 
+        // [WHEN]
         mockMvc.perform(post("/items/" + ITEM_ID + "/share")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"userId\":\"" + OWNER_ID + "\",\"role\":\"VIEWER\"}"))
+        // [THEN]
                 .andExpect(status().isNotFound());
     }
 
     @Test
     @DisplayName("DELETE /items/{id}/share/{userId} returns 403 for non-owner")
     void revokeShouldReturnForbidden() throws Exception {
+        // [GIVEN]
         String token = authenticate("jan.kowalski");
         doThrow(new ItemAccessDeniedException()).when(itemPermissionService).revoke(eq(ITEM_ID), eq(OWNER_ID), any());
 
+        // [WHEN]
         mockMvc.perform(delete("/items/" + ITEM_ID + "/share/" + OWNER_ID)
                         .header("Authorization", "Bearer " + token))
+        // [THEN]
                 .andExpect(status().isForbidden());
     }
 
     @Test
     @DisplayName("GET /items/{id}/history returns 403 without access")
     void historyShouldReturnForbidden() throws Exception {
+        // [GIVEN]
         String token = authenticate("jan.kowalski");
         when(itemHistoryService.findHistory(eq(ITEM_ID), any())).thenThrow(new ItemAccessDeniedException());
 
+        // [WHEN]
         mockMvc.perform(get("/items/" + ITEM_ID + "/history")
                         .header("Authorization", "Bearer " + token))
+        // [THEN]
                 .andExpect(status().isForbidden());
     }
 
     @Test
     @DisplayName("GET /items/{id}/history returns 404 for missing item")
     void historyShouldReturnNotFound() throws Exception {
+        // [GIVEN]
         String token = authenticate("jan.kowalski");
         when(itemHistoryService.findHistory(eq(ITEM_ID), any())).thenThrow(new ItemNotFoundException(ITEM_ID));
 
+        // [WHEN]
         mockMvc.perform(get("/items/" + ITEM_ID + "/history")
                         .header("Authorization", "Bearer " + token))
+        // [THEN]
                 .andExpect(status().isNotFound());
     }
 
     @Test
     @DisplayName("PATCH /items/{id} with optimistic lock failure returns 409")
     void updateShouldReturnConflictForOptimisticLock() throws Exception {
+        // [GIVEN]
         String token = authenticate("jan.kowalski");
         when(itemService.update(eq(ITEM_ID), any(), any()))
                 .thenThrow(new ObjectOptimisticLockingFailureException("stale version", null));
 
+        // [WHEN]
         mockMvc.perform(patch("/items/" + ITEM_ID)
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"title\":\"new\",\"version\":0}"))
+        // [THEN]
                 .andExpect(status().isConflict());
     }
 }

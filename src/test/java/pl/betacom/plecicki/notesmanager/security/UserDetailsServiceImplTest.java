@@ -29,11 +29,14 @@ class UserDetailsServiceImplTest {
     @Test
     @DisplayName("should return user details when user exists")
     void shouldReturnUserDetailsWhenUserExists() {
+        // [GIVEN]
         User user = User.builder().login("jan.kowalski").password("encoded").build();
         when(userRepository.findByLogin("jan.kowalski")).thenReturn(Optional.of(user));
 
+        // [WHEN]
         UserDetails details = userDetailsService.loadUserByUsername("jan.kowalski");
 
+        // [THEN]
         assertThat(details.getUsername()).isEqualTo("jan.kowalski");
         assertThat(details.getPassword()).isEqualTo("encoded");
     }
@@ -41,8 +44,10 @@ class UserDetailsServiceImplTest {
     @Test
     @DisplayName("should throw when user does not exist")
     void shouldThrowWhenUserDoesNotExist() {
+        // [GIVEN]
         when(userRepository.findByLogin("unknown")).thenReturn(Optional.empty());
 
+        // [WHEN]
         assertThatThrownBy(() -> userDetailsService.loadUserByUsername("unknown"))
                 .isInstanceOf(UsernameNotFoundException.class);
     }

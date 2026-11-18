@@ -64,23 +64,28 @@ class ItemPermissionServiceTest {
     @Test
     @DisplayName("grant should throw forbidden for non-owner")
     void grantShouldThrowForbiddenForNonOwner() {
+        // [GIVEN]
         Item item = item();
         when(itemRepository.findById(itemId)).thenReturn(Optional.of(item));
         when(itemAccessService.isOwner(eq(item), any())).thenReturn(false);
 
+        // [WHEN]
         assertThatThrownBy(() -> itemPermissionService.grant(itemId, new ShareItemRequest(targetId, Role.VIEWER), user(targetId)))
                 .isInstanceOf(ItemAccessDeniedException.class);
 
+        // [THEN]
         verify(itemPermissionRepository, never()).saveAndFlush(any());
     }
 
     @Test
     @DisplayName("grant should throw 400 when sharing with self")
     void grantShouldThrowForSelfShare() {
+        // [GIVEN]
         Item item = item();
         when(itemRepository.findById(itemId)).thenReturn(Optional.of(item));
         when(itemAccessService.isOwner(eq(item), any())).thenReturn(true);
 
+        // [WHEN]
         assertThatThrownBy(() -> itemPermissionService.grant(itemId, new ShareItemRequest(ownerId, Role.VIEWER), user(ownerId)))
                 .isInstanceOf(SelfShareException.class);
     }
@@ -88,10 +93,12 @@ class ItemPermissionServiceTest {
     @Test
     @DisplayName("grant should reject OWNER role")
     void grantShouldRejectOwnerRole() {
+        // [GIVEN]
         Item item = item();
         when(itemRepository.findById(itemId)).thenReturn(Optional.of(item));
         when(itemAccessService.isOwner(eq(item), any())).thenReturn(true);
 
+        // [WHEN]
         assertThatThrownBy(() -> itemPermissionService.grant(itemId, new ShareItemRequest(targetId, Role.OWNER), user(ownerId)))
                 .isInstanceOf(InvalidShareRoleException.class);
     }
@@ -99,11 +106,13 @@ class ItemPermissionServiceTest {
     @Test
     @DisplayName("grant should throw 404 for missing target user")
     void grantShouldThrowForMissingUser() {
+        // [GIVEN]
         Item item = item();
         when(itemRepository.findById(itemId)).thenReturn(Optional.of(item));
         when(itemAccessService.isOwner(eq(item), any())).thenReturn(true);
         when(userRepository.findById(targetId)).thenReturn(Optional.empty());
 
+        // [WHEN]
         assertThatThrownBy(() -> itemPermissionService.grant(itemId, new ShareItemRequest(targetId, Role.VIEWER), user(ownerId)))
                 .isInstanceOf(UserNotFoundException.class);
     }
@@ -111,6 +120,7 @@ class ItemPermissionServiceTest {
     @Test
     @DisplayName("grant should create new permission with grantedAt")
     void grantShouldCreatePermission() {
+        // [GIVEN]
         Item item = item();
         when(itemRepository.findById(itemId)).thenReturn(Optional.of(item));
         when(itemAccessService.isOwner(eq(item), any())).thenReturn(true);
@@ -119,8 +129,10 @@ class ItemPermissionServiceTest {
         ItemPermission saved = ItemPermission.builder().item(item).user(user(targetId)).role(Role.VIEWER).grantedAt(Instant.now()).build();
         when(itemPermissionRepository.saveAndFlush(any(ItemPermission.class))).thenReturn(saved);
 
+        // [WHEN]
         GrantResult result = itemPermissionService.grant(itemId, new ShareItemRequest(targetId, Role.VIEWER), user(ownerId));
 
+        // [THEN]
         assertThat(result.created()).isTrue();
         assertThat(result.permission().userId()).isEqualTo(targetId);
         assertThat(result.permission().role()).isEqualTo(Role.VIEWER);
@@ -135,6 +147,7 @@ class ItemPermissionServiceTest {
     @Test
     @DisplayName("grant should overwrite existing role and keep grantedAt")
     void grantShouldOverwriteRole() {
+        // [GIVEN]
         Item item = item();
         when(itemRepository.findById(itemId)).thenReturn(Optional.of(item));
         when(itemAccessService.isOwner(eq(item), any())).thenReturn(true);
@@ -145,8 +158,10 @@ class ItemPermissionServiceTest {
         when(itemPermissionRepository.findByItemIdAndUserId(itemId, targetId)).thenReturn(Optional.of(existing));
         when(itemPermissionRepository.saveAndFlush(any(ItemPermission.class))).thenAnswer(inv -> inv.getArgument(0));
 
+        // [WHEN]
         GrantResult result = itemPermissionService.grant(itemId, new ShareItemRequest(targetId, Role.EDITOR), user(ownerId));
 
+        // [THEN]
         assertThat(result.created()).isFalse();
         assertThat(existing.getRole()).isEqualTo(Role.EDITOR);
         assertThat(result.permission().grantedAt()).isEqualTo(originalGrant);
@@ -156,24 +171,29 @@ class ItemPermissionServiceTest {
     @Test
     @DisplayName("revoke should delete permission")
     void revokeShouldDeletePermission() {
+        // [GIVEN]
         Item item = item();
         when(itemRepository.findById(itemId)).thenReturn(Optional.of(item));
         when(itemAccessService.isOwner(eq(item), any())).thenReturn(true);
         when(itemPermissionRepository.deleteByItemIdAndUserId(itemId, targetId)).thenReturn(1L);
 
+        // [WHEN]
         itemPermissionService.revoke(itemId, targetId, user(ownerId));
 
+        // [THEN]
         verify(itemPermissionRepository).deleteByItemIdAndUserId(itemId, targetId);
     }
 
     @Test
     @DisplayName("revoke should throw 404 when no permission")
     void revokeShouldThrowNotFound() {
+        // [GIVEN]
         Item item = item();
         when(itemRepository.findById(itemId)).thenReturn(Optional.of(item));
         when(itemAccessService.isOwner(eq(item), any())).thenReturn(true);
         when(itemPermissionRepository.deleteByItemIdAndUserId(itemId, targetId)).thenReturn(0L);
 
+        // [WHEN]
         assertThatThrownBy(() -> itemPermissionService.revoke(itemId, targetId, user(ownerId)))
                 .isInstanceOf(PermissionNotFoundException.class);
     }
@@ -181,13 +201,16 @@ class ItemPermissionServiceTest {
     @Test
     @DisplayName("revoke should throw forbidden for non-owner")
     void revokeShouldThrowForbidden() {
+        // [GIVEN]
         Item item = item();
         when(itemRepository.findById(itemId)).thenReturn(Optional.of(item));
         when(itemAccessService.isOwner(eq(item), any())).thenReturn(false);
 
+        // [WHEN]
         assertThatThrownBy(() -> itemPermissionService.revoke(itemId, targetId, user(targetId)))
                 .isInstanceOf(ItemAccessDeniedException.class);
 
+        // [THEN]
         verify(itemPermissionRepository, never()).deleteByItemIdAndUserId(any(), any());
     }
 }

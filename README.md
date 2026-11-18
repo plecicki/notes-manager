@@ -23,7 +23,10 @@ Warstwy: `controller` → `service` → `repository` → `entity` (+ `dto`, `exc
 
 - **Java 21**
 - **Spring Boot 3.5 + MySQL 8 + Hibernate/JPA**.
-- **Hibernate Envers** — audyt historii zmian: encja `Item` ma `@Audited`, historia pobierana przez Audit Query API (`forRevisionsOfEntity`). Własna `RevisionEntity` (`AuditRevisionEntity` + `AuditRevisionListener`) zapisuje, **kto** dokonał zmiany (`changedBy`). Schemat (w tym `items_aud`) zarządza **Liquibase**.
+- **Hibernate Envers** — audyt historii zmian
+   - Encja `Item` ma `@Audited`
+   - Historia pobierana przez Audit Query API.
+   - Widać kto dokonał zmiany (`changedBy`).
 - **JWT (biblioteka JJWT)** — token w nagłówku `Authorization: Bearer ...`.
    - **401** brakujący/nieważny token,
    - **403** brak uprawnień do zasobu.

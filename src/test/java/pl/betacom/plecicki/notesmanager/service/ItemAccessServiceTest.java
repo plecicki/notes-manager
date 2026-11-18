@@ -60,28 +60,34 @@ class ItemAccessServiceTest {
     @Test
     @DisplayName("canEdit returns true for EDITOR")
     void canEditShouldReturnTrueForEditor() {
+        // [GIVEN]
         Item item = item(ownerId);
         when(itemPermissionRepository.findByItemIdAndUserId(itemId, otherId))
                 .thenReturn(Optional.of(ItemPermission.builder().item(item).user(user(otherId)).role(Role.EDITOR).build()));
 
+        // [WHEN]
         assertThat(itemAccessService.canEdit(item, user(otherId))).isTrue();
     }
 
     @Test
     @DisplayName("canEdit returns false for VIEWER")
     void canEditShouldReturnFalseForViewer() {
+        // [GIVEN]
         Item item = item(ownerId);
         when(itemPermissionRepository.findByItemIdAndUserId(itemId, otherId))
                 .thenReturn(Optional.of(ItemPermission.builder().item(item).user(user(otherId)).role(Role.VIEWER).build()));
 
+        // [WHEN]
         assertThat(itemAccessService.canEdit(item, user(otherId))).isFalse();
     }
 
     @Test
     @DisplayName("canEdit returns false without permission")
     void canEditShouldReturnFalseWithoutPermission() {
+        // [GIVEN]
         when(itemPermissionRepository.findByItemIdAndUserId(itemId, otherId)).thenReturn(Optional.empty());
 
+        // [WHEN]
         assertThat(itemAccessService.canEdit(item(ownerId), user(otherId))).isFalse();
     }
 
@@ -94,25 +100,31 @@ class ItemAccessServiceTest {
     @Test
     @DisplayName("canRead returns true with any permission")
     void canReadShouldReturnTrueWithPermission() {
+        // [GIVEN]
         Item item = item(ownerId);
         when(itemPermissionRepository.findByItemIdAndUserId(itemId, otherId))
                 .thenReturn(Optional.of(ItemPermission.builder().item(item).user(user(otherId)).role(Role.VIEWER).build()));
 
+        // [WHEN]
         assertThat(itemAccessService.canRead(item, user(otherId))).isTrue();
     }
 
     @Test
     @DisplayName("canRead returns false without permission")
     void canReadShouldReturnFalseWithoutPermission() {
+        // [GIVEN]
         when(itemPermissionRepository.findByItemIdAndUserId(itemId, otherId)).thenReturn(Optional.empty());
 
+        // [WHEN]
         assertThat(itemAccessService.canRead(item(ownerId), user(otherId))).isFalse();
     }
 
     @Test
     @DisplayName("isOwner returns false when item has no owner")
     void isOwnerShouldReturnFalseWhenOwnerIsNull() {
+        // [GIVEN]
         Item item = Item.builder().id(itemId).title("title").build();
+        // [WHEN]
         assertThat(itemAccessService.isOwner(item, user(ownerId))).isFalse();
     }
 
